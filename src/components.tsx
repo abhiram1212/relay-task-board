@@ -3,7 +3,7 @@ import { AlertCircle, ArrowDown, ArrowRight, ArrowUp, CalendarDays, LoaderCircle
 import { dueInfo, initials, priorities, type NamedItem, type Priority } from './model'
 
 export function Logo() {
-  return <img className="logo" src="/relay.svg" alt="" width="34" height="34" />
+  return <img className="logo" src="/relay.svg" alt="" width="25" height="25" />
 }
 
 export function Avatar({ item }: { item: NamedItem }) {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  ArrowDown, ArrowRight, ArrowUpRight, CalendarClock, Check, ChevronRight, CircleCheck, CircleHelp,
-  FlaskConical, Kanban, LayoutGrid, Plus, RefreshCw, Search, SlidersHorizontal, Tag, Users, X,
+  ArrowDown, ArrowRight, Check, ChevronRight, CircleHelp,
+  Kanban, LockKeyhole, Plus, RefreshCw, Search, SlidersHorizontal, Tag, Users, X,
 } from 'lucide-react'
 import { configured, ensureGuest, errorText, getBoard, loadExample, moveTask, type BoardData, type Collection } from './api'
 import Board from './Board'
@@ -127,11 +127,10 @@ export default function App() {
   )
   const completed = tasks.filter(task => task.status === 'done').length
   const overdue = tasks.filter(task => task.due_date && dueInfo(task.due_date, task.status === 'done').overdue).length
-  const completion = tasks.length ? Math.round(completed / tasks.length * 100) : 0
   function clearFilters() { setQuery(''); setPriority(''); setAssignee(''); setLabel('') }
 
   return <div className="app">
-    <aside className="sidebar" aria-label="Workspace navigation">
+    <nav className="sidebar" aria-label="Workspace navigation">
       <div className="brand"><Logo /><span>Relay</span></div>
       <div className="sidebar-body">
         <p className="nav-heading">Workspace</p>
@@ -143,49 +142,47 @@ export default function App() {
       <div className="sidebar-end">
         <button className="nav-item" type="button" aria-label="About Relay" onClick={() => setAbout(true)}><CircleHelp size={17} /> About Relay</button>
         <div className="session">
-          <span className="avatar guest-avatar">G</span><div><strong>Guest workspace</strong><span>Private board</span></div>
+          <span className="avatar guest-avatar" aria-hidden="true">G</span><strong>Guest workspace</strong>
         </div>
       </div>
-    </aside>
+    </nav>
 
     <main className="main">
       <div className="topbar">
         <div className="breadcrumb"><span>Workspace</span><ChevronRight size={14} /><strong>Project board</strong></div>
         <div className="topbar-actions">
-          <span className={`connection${ready && !error ? ' online' : ''}`}><i />{loading ? 'Connecting' : ready && !error ? 'Guest session' : 'Connection needs attention'}</span>
+          <span className="connection"><LockKeyhole size={13} />{loading ? 'Connecting…' : ready ? 'Private' : 'Offline'}</span>
           <button className="icon-button refresh-button" type="button" aria-label="Refresh board" title="Refresh board" disabled={loading || working} onClick={() => void manualRefresh()}><RefreshCw size={16} /></button>
         </div>
       </div>
       <div className="workspace">
         <header className="page-header">
-          <div><h1>Project board</h1></div>
-          <button type="button" className="button primary new-task" disabled={!ready || working} onClick={() => setEditor({ status: 'todo' })}><Plus size={18} /> New task</button>
-        </header>
-
-        <section className="stats" aria-label="Board summary">
-          <div className="stat"><span className="stat-icon tone-violet"><LayoutGrid size={19} /></span><div><span>Total tasks</span><strong>{ready ? tasks.length : '—'}</strong></div></div>
-          <div className="stat"><span className="stat-icon tone-green"><CircleCheck size={20} /></span><div><span>Completed</span><strong>{ready ? completed : '—'}</strong></div>
-            {ready && tasks.length > 0 && <span className="completion" title={`${completion}% completed`}>{completion}% <ArrowUpRight size={12} /></span>}
+          <div className="page-title-row">
+            <h1>Project board</h1>
+            {members.length > 0 && <button className="team-shortcut avatar-stack" type="button" title="View team members" aria-label="View team members" disabled={working} onClick={() => setCollection('team_members')}>
+              {members.slice(0, 4).map(member => <Avatar key={member.id} item={member} />)}
+              {members.length > 4 && <span className="avatar overflow-avatar">+{members.length - 4}</span>}
+            </button>}
           </div>
-          <div className="stat"><span className="stat-icon tone-rose"><CalendarClock size={19} /></span><div><span>Overdue</span><strong>{ready ? overdue : '—'}</strong></div></div>
-        </section>
+          <section className="stats" aria-label="Board summary">
+            <span><strong>{ready ? tasks.length : '—'}</strong> tasks</span>
+            <span><strong>{ready ? completed : '—'}</strong> completed</span>
+            <span className={overdue ? 'has-overdue' : undefined}><strong>{ready ? overdue : '—'}</strong> overdue</span>
+          </section>
+        </header>
 
         <section className="board-area" aria-labelledby="board-title">
           <div className="toolbar">
-            <div className="board-title"><Kanban size={18} /><h2 id="board-title">Board</h2>
+            <div className="board-title"><Kanban size={16} /><h2 id="board-title">Board</h2>
               {filtered && <span className="results">{shown.length} of {tasks.length}</span>}
             </div>
             <div className="tools">
-              {members.length > 0 && <button className="team-shortcut avatar-stack" type="button" title="View team members" aria-label="View team members" disabled={working} onClick={() => setCollection('team_members')}>
-                {members.slice(0, 4).map(member => <Avatar key={member.id} item={member} />)}
-                {members.length > 4 && <span className="avatar overflow-avatar">+{members.length - 4}</span>}
-              </button>}
               <label className="search"><Search size={16} /><input ref={searchRef} aria-label="Search tasks" placeholder="Search tasks…" value={query} disabled={!ready} onChange={event => setQuery(event.target.value)} />
                 {query ? <button className="icon-button" type="button" aria-label="Clear search" onClick={() => { setQuery(''); searchRef.current?.focus() }}><X size={14} /></button>
                   : <kbd>{/Mac/.test(navigator.platform) ? '⌘' : 'Ctrl'} K</kbd>}
               </label>
               <div className="filters" ref={filtersRef} onKeyDown={event => { if (event.key === 'Escape') { setFiltersOpen(false); filtersRef.current?.querySelector('button')?.focus() } }}>
-                <button className={`button secondary filter-button${filterCount ? ' filter-active' : ''}`} type="button" aria-expanded={filtersOpen} disabled={!ready} onClick={() => setFiltersOpen(open => !open)}><SlidersHorizontal size={15} /> Filter{filterCount > 0 && <span>{filterCount}</span>}</button>
+                <button className={`button secondary filter-button${filterCount ? ' filter-active' : ''}`} type="button" aria-label={filterCount ? `Filter, ${filterCount} active` : 'Filter'} aria-expanded={filtersOpen} disabled={!ready} onClick={() => setFiltersOpen(open => !open)}><SlidersHorizontal size={15} /> <span className="filter-label">Filter</span>{filterCount > 0 && <span className="filter-count">{filterCount}</span>}</button>
                 {filtersOpen && <div className="filter-panel">
                   <div className="filter-heading"><strong>Filter tasks</strong><button type="button" className="text-button" onClick={clearFilters}>Reset</button></div>
                   <label className="field">Priority<select value={priority} onChange={event => setPriority(event.target.value as Priority | '')}><option value="">Any priority</option>
@@ -196,6 +193,7 @@ export default function App() {
                     {labels.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
                 </div>}
               </div>
+              <button type="button" className="button primary new-task" disabled={!ready || working} onClick={() => setEditor({ status: 'todo' })}><Plus size={15} /> New task</button>
             </div>
           </div>
           {error && <ErrorBox message={error} action={configured && <button className="button secondary compact" type="button" disabled={working} onClick={() => void manualRefresh()}>Retry</button>} />}
@@ -203,9 +201,8 @@ export default function App() {
           {!loading && !ready && !configured && <div className="setup-help"><h3>Connect Supabase to open Relay</h3><p>Follow the local setup in the project README, then reload this page.</p></div>}
           {ready && <>
             {!tasks.length && !filtered && <div className="welcome">
-              <span className="welcome-icon"><Kanban size={24} /></span>
-              <div><h3>Start with a task</h3><p>Create your first task or load an example board to explore Relay.</p></div>
-              <button type="button" className="button secondary" disabled={working} onClick={() => void example()}><FlaskConical size={16} /> {working ? 'Working…' : 'Load example board'}</button>
+              <p>Create a task to get started, or try the example board.</p>
+              <button type="button" className="button secondary" disabled={working} onClick={() => void example()}>{working ? 'Loading…' : 'Load example board'}</button>
             </div>}
             {filtered && !shown.length && <div className="no-results"><Search size={18} /><span>No tasks match your search or filters.</span><button className="text-button" type="button" onClick={clearFilters}>Clear filters</button></div>}
             <Board tasks={shown} members={members} labels={labels} filtered={filtered} moving={working}
